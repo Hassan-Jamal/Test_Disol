@@ -275,3 +275,110 @@ test.describe.serial('3. Add to Cart Functionality', () => {
     }
   });
 });
+
+// ============================================================
+// 4. PAYMENT FUNCTIONALITY TESTS
+// ============================================================
+test.describe.serial('4. Payment Functionality', () => {
+  
+  // Helper function to login
+  async function loginUser(page) {
+    await page.goto('/auth/login/');
+    await page.waitForLoadState('networkidle');
+    await page.locator('input[type="email"], input[name="email"]').first().fill(VALID_EMAIL);
+    await page.locator('input[type="password"], input[name="password"]').first().fill(VALID_PASSWORD);
+    await page.locator('button:has-text("Sign In"), button:has-text("Login"), button[type="submit"]').first().click();
+    await page.waitForTimeout(3000);
+  }
+
+  /**
+   * TC-010: Complete Payment Flow
+   * Description: Verify user can complete payment after adding product to cart
+   * Preconditions: User is logged in
+   * Expected Result: Payment success message is displayed
+   */
+  test('TC-010: Should complete payment successfully', async ({ page }) => {
+    // Login first
+    await loginUser(page);
+    
+    // Navigate to home page
+    await page.goto('/');
+    await page.waitForLoadState('networkidle');
+    
+    // Add product to cart
+    const addToCartBtn = page.locator('button:has-text("Add to Cart"), button:has-text("Add To Cart"), [class*="add-to-cart"]').first();
+    if (await addToCartBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await addToCartBtn.click();
+      await page.waitForTimeout(2000);
+    }
+    
+    // Try to find checkout button - it might appear after adding to cart or need to go to cart first
+    let checkoutBtn = page.locator('button:has-text("Checkout"), a:has-text("Checkout"), [class*="checkout"]').first();
+    
+    // If checkout button not visible, try going to cart page first
+    if (!(await checkoutBtn.isVisible().catch(() => false))) {
+      // Click on cart icon/link
+      const cartLink = page.locator('a:has-text("Cart"), [href*="cart"], [class*="cart"], .cart-icon').first();
+      if (await cartLink.isVisible().catch(() => false)) {
+        await cartLink.click();
+        await page.waitForLoadState('networkidle');
+        await page.waitForTimeout(2000);
+      }
+      
+      // Now look for checkout button again
+      checkoutBtn = page.locator('button:has-text("Checkout"), a:has-text("Checkout"), [class*="checkout"]').first();
+    }
+    
+    // Click checkout button
+    if (await checkoutBtn.isVisible({ timeout: 5000 }).catch(() => false)) {
+      await checkoutBtn.click();
+    }
+    
+    // Wait for Stripe payment page to load
+    await page.waitForTimeout(3000);
+    
+    // Fill in payment details on Stripe checkout page
+    // Email field
+    const emailField = page.locator('input[name="email"], input[placeholder*="email" i]').first();
+    if (await emailField.isVisible().catch(() => false)) {
+      await emailField.fill(VALID_EMAIL);
+    }
+    
+    // Card number: 4242424242424242
+    const cardNumberField = page.locator('input[name="cardNumber"], input[placeholder*="1234" i]').first();
+    if (await cardNumberField.isVisible().catch(() => false)) {
+      await cardNumberField.fill('4242424242424242');
+    }
+    
+    // Expiry date: 12/27
+    const expiryField = page.locator('input[name="cardExpiry"], input[placeholder*="MM" i]').first();
+    if (await expiryField.isVisible().catch(() => false)) {
+      await expiryField.fill('12/27');
+    }
+    
+    // CVC: 271
+    const cvcField = page.locator('input[name="cardCvc"], input[placeholder*="CVC" i]').first();
+    if (await cvcField.isVisible().catch(() => false)) {
+      await cvcField.fill('271');
+    }
+    
+    // Cardholder name: hassan jamal
+    const nameField = page.locator('input[name="billingName"], input[placeholder*="name on card" i]').first();
+    if (await nameField.isVisible().catch(() => false)) {
+      await nameField.fill('hassan jamal');
+    }
+    
+    // Click Pay button
+    const payBtn = page.locator('button:has-text("Pay"), button[type="submit"]').first();
+    await payBtn.click();
+    
+    // Wait for payment processing
+    await page.waitForTimeout(5000);
+    
+    // Verify payment success message: "Thank You! Your Payment Is Successfully Done."
+    const successMessage = page.locator('text=/Thank You|Payment Is Successfully Done|Your Payment|Successfully/i');
+    const isSuccess = await successMessage.first().isVisible({ timeout: 15000 }).catch(() => false);
+    
+    expect(isSuccess).toBeTruthy();
+  });
+});
