@@ -295,20 +295,16 @@ test.describe.serial('4. Payment Functionality', () => {
       await cvcField.fill('271');
     }
     
-    // Cardholder name: hassan jamal
     const nameField = page.locator('input[name="billingName"], input[placeholder*="name on card" i]').first();
     if (await nameField.isVisible().catch(() => false)) {
       await nameField.fill('hassan jamal');
     }
     
-    // Click Pay button
     const payBtn = page.locator('button:has-text("Pay"), button[type="submit"]').first();
     await payBtn.click();
     
-    // Wait for payment processing
     await page.waitForTimeout(5000);
     
-    // Verify payment success message: "Thank You! Your Payment Is Successfully Done."
     const successMessage = page.locator('text=/Thank You|Payment Is Successfully Done|Your Payment|Successfully/i');
     const isSuccess = await successMessage.first().isVisible({ timeout: 15000 }).catch(() => false);
     
