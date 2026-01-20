@@ -212,7 +212,7 @@ test.describe.serial('3. Add to Cart Functionality', () => {
   test('TC-009: Should handle out-of-stock product appropriately', async ({ page }) => {
     await loginUser(page);
     await page.goto('/');
-    await page.waitForLoadState('networkidle');
+    await page.waitForTimeout(3000);
     
     const outOfStock = page.locator('text=/out of stock|sold out|unavailable/i').first();
     
